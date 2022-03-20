@@ -2,13 +2,25 @@ package repos
 
 import (
 	"appimage-cli-tool/internal/utils"
-	"github.com/antchfx/xmlquery"
-	"strconv"
-	"strings"
+	
+	"encoding/json"
+        "fmt"
+        "io/ioutil"
+        "net/http"
+        "net/url"
+        "strings"
 )
 
-type AppImageHubRepo struct {
-	ContentId string
+type (
+	AppImageHubRepo struct {
+		ContentId string
+	}
+	Store struct {
+		Id   string
+		Name string
+		Url  string
+	}
+
 }
 
 func NewAppImageHubRepo(target string) (Repo, error) {
@@ -31,38 +43,39 @@ func (a AppImageHubRepo) Id() string {
 }
 
 func (a AppImageHubRepo) GetLatestRelease() (*Release, error) {
-	doc, err := xmlquery.LoadURL("https://www.appimagehub.com/ocs/v1/content/data/" + a.ContentId)
-	if err != nil {
-		return nil, err
-	}
+	var (
+                downloadLinks []utils.BinaryUrl
+                link          string
+        )
+	store := []Store{}
 
-	var downloadLinks []utils.BinaryUrl
-	for i := 1; i < 100; i++ {
-		idx := strconv.Itoa(i)
-		link, err := xmlquery.Query(doc, "//ocs/data/content/downloadlink"+idx+"/text()")
-		if err != nil {
-			return nil, err
-		}
-		name, err := xmlquery.Query(doc, "//ocs/data/content/downloadname"+idx+"/text()")
-		if err != nil {
-			return nil, err
-		}
+        req, err := http.Get(fmt.Sprintf("https://www.appimagehub.com/p/%s/loadFiles", a.ContentId))
+        if err != nil {
+                return nil, err
+        }
+        defer req.Body.Close()
 
-		if link == nil {
-			break
-		}
-
-		downloadLink := utils.BinaryUrl{
-			FileName: name.Data,
-			Url:      link.Data,
-		}
-
-		if strings.HasSuffix(downloadLink.FileName, ".AppImage") ||
-			strings.HasSuffix(downloadLink.FileName, ".appimage") {
-			downloadLinks = append(downloadLinks, downloadLink)
-		}
-	}
-
+        content, _ := ioutil.ReadAll(req.Body)
+        if err := json.Unmarshal(content, &store); err != nil {
+                return nil, err
+        }
+	
+        if len(store) > 0 {
+                for _, v := range store {
+                        if link, err = url.QueryUnescape(v.Url); err != nil {
+                                return nil, err
+                        }
+                        downloadLink := utils.BinaryUrl{
+                                FileName: v.Name,
+                                Url:      link,
+                        }
+                        if strings.HasSuffix(downloadLink.FileName, ".AppImage") ||
+                                strings.HasSuffix(downloadLink.FileName, ".appimage") {
+                                downloadLinks = append(downloadLinks, downloadLink)
+                        }
+                }
+        }
+	
 	if len(downloadLinks) > 0 {
 		return &Release{
 			"latest",
