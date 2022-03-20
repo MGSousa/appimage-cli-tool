@@ -1,5 +1,6 @@
 package commands
 
 type Context struct {
-	Debug bool
+	Debug              bool
+	DesktopIntegration bool
 }

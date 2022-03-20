@@ -11,7 +11,7 @@ type RemoveCmd struct {
 	KeepFile bool   `help:"Remove only the application desktop entry."`
 }
 
-func (cmd *RemoveCmd) Run(*Context) (err error) {
+func (cmd *RemoveCmd) Run(ctx *Context) (err error) {
 	registry, err := utils.OpenRegistry()
 	if err != nil {
 		return err
@@ -25,9 +25,11 @@ func (cmd *RemoveCmd) Run(*Context) (err error) {
 		return fmt.Errorf("application not found \"" + cmd.Target + "\"")
 	}
 
-	err = removeDesktopIntegration(entry.FilePath)
-	if err != nil {
-		fmt.Println("Desktop integration removal failed: " + err.Error())
+	if ctx.DesktopIntegration {
+		err = removeDesktopIntegration(entry.FilePath)
+		if err != nil {
+			fmt.Println("Desktop integration removal failed: " + err.Error())
+		}
 	}
 
 	if cmd.KeepFile {

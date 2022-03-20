@@ -13,7 +13,7 @@ type InstallCmd struct {
 	Target string `arg name:"target" help:"Installation target." type:"string"`
 }
 
-func (cmd *InstallCmd) Run(*commands.Context) (err error) {
+func (cmd *InstallCmd) Run(ctx *commands.Context) (err error) {
 	if _, err := os.Stat(cmd.Target); err == nil {
 		cmd.createDesktopIntegration(cmd.Target)
 		return nil
@@ -50,7 +50,9 @@ func (cmd *InstallCmd) Run(*commands.Context) (err error) {
 
 	cmd.addToRegistry(targetFilePath, repo)
 
-	cmd.createDesktopIntegration(targetFilePath)
+	if ctx.DesktopIntegration {
+		cmd.createDesktopIntegration(targetFilePath)
+	}
 
 	signingEntity, _ := utils.VerifySignature(targetFilePath)
 	if signingEntity != nil {
