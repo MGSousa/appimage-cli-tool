@@ -2,7 +2,7 @@ package repos
 
 import (
 	"appimage-cli-tool/internal/utils"
-	
+
 	"encoding/json"
         "fmt"
         "io/ioutil"
@@ -20,8 +20,7 @@ type (
 		Name string
 		Url  string
 	}
-
-}
+)
 
 func NewAppImageHubRepo(target string) (Repo, error) {
 	if strings.HasPrefix(target, "https://www.appimagehub.com/p/") {
@@ -59,7 +58,6 @@ func (a AppImageHubRepo) GetLatestRelease() (*Release, error) {
         if err := json.Unmarshal(content, &store); err != nil {
                 return nil, err
         }
-	
         if len(store) > 0 {
                 for _, v := range store {
                         if link, err = url.QueryUnescape(v.Url); err != nil {
@@ -75,7 +73,7 @@ func (a AppImageHubRepo) GetLatestRelease() (*Release, error) {
                         }
                 }
         }
-	
+
 	if len(downloadLinks) > 0 {
 		return &Release{
 			"latest",
