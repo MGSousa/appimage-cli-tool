@@ -4,11 +4,11 @@ import (
 	"appimage-cli-tool/internal/utils"
 
 	"encoding/json"
-        "fmt"
-        "io/ioutil"
-        "net/http"
-        "net/url"
-        "strings"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"strings"
 )
 
 type (
@@ -16,9 +16,11 @@ type (
 		ContentId string
 	}
 	Store struct {
-		Id   string
-		Name string
-		Url  string
+		Files []struct {
+			Id   string
+			Name string
+			Url  string
+		}
 	}
 )
 
@@ -43,36 +45,37 @@ func (a AppImageHubRepo) Id() string {
 
 func (a AppImageHubRepo) GetLatestRelease() (*Release, error) {
 	var (
-                downloadLinks []utils.BinaryUrl
-                link          string
-        )
-	store := []Store{}
+		downloadLinks []utils.BinaryUrl
+		link          string
+	)
+	store := Store{}
 
-        req, err := http.Get(fmt.Sprintf("https://www.appimagehub.com/p/%s/loadFiles", a.ContentId))
-        if err != nil {
-                return nil, err
-        }
-        defer req.Body.Close()
+	req, err := http.Get(fmt.Sprintf("https://www.appimagehub.com/p/%s/loadFiles", a.ContentId))
+	if err != nil {
+		return nil, err
+	}
+	defer req.Body.Close()
 
-        content, _ := ioutil.ReadAll(req.Body)
-        if err := json.Unmarshal(content, &store); err != nil {
-                return nil, err
-        }
-        if len(store) > 0 {
-                for _, v := range store {
-                        if link, err = url.QueryUnescape(v.Url); err != nil {
-                                return nil, err
-                        }
-                        downloadLink := utils.BinaryUrl{
-                                FileName: v.Name,
-                                Url:      link,
-                        }
-                        if strings.HasSuffix(downloadLink.FileName, ".AppImage") ||
-                                strings.HasSuffix(downloadLink.FileName, ".appimage") {
-                                downloadLinks = append(downloadLinks, downloadLink)
-                        }
-                }
-        }
+	content, _ := ioutil.ReadAll(req.Body)
+	if err := json.Unmarshal(content, &store); err != nil {
+		return nil, err
+	}
+
+	if len(store.Files) > 0 {
+		for _, v := range store.Files {
+			if link, err = url.QueryUnescape(v.Url); err != nil {
+				return nil, err
+			}
+			downloadLink := utils.BinaryUrl{
+				FileName: v.Name,
+				Url:      link,
+			}
+			if strings.HasSuffix(downloadLink.FileName, ".AppImage") ||
+				strings.HasSuffix(downloadLink.FileName, ".appimage") {
+				downloadLinks = append(downloadLinks, downloadLink)
+			}
+		}
+	}
 
 	if len(downloadLinks) > 0 {
 		return &Release{
